@@ -106,6 +106,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
     hus_xr = xr.open_dataset(hus_file,
                              decode_coords = False,
                              decode_times = False,
+                             chunks={'time': 10},
                             )
     hus_xr = xr.decode_cf(hus_xr, decode_coords = True, decode_times = True)
     
@@ -116,6 +117,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
         ua_xr = xr.open_dataset(ua_file,
                                 decode_coords = False,
                                 decode_times = False,
+                                chunks={'time': 10},
                                )
         ua_xr = xr.decode_cf(ua_xr, decode_coords = True, decode_times = True)
     if va_file != "":
@@ -123,6 +125,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
         va_xr = xr.open_dataset(va_file,
                                 decode_coords = False,
                                 decode_times = False,
+                                chunks={'time': 10},
                                )
         va_xr = xr.decode_cf(va_xr, decode_coords = True, decode_times = True)
     
