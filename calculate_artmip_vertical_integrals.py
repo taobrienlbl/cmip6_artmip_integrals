@@ -225,6 +225,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
             # write the prw file
             vprint("Writing " + prw_output_file)
             prw_xr.to_netcdf(prw_output_file,
+                             engine = 'h5netcdf',
                              unlimited_dims = unlimited_dims)
             prw_xr.close()
             
@@ -241,6 +242,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 fix_fill_values(windhusavi_xr, "windhusavi")
                 vprint("Writing " + windhusavi_output_file)
                 windhusavi_xr.to_netcdf(windhusavi_output_file,
+                                        engine = 'h5netcdf',
                                         unlimited_dims = unlimited_dims)
                 windhusavi_xr.close()
                 
@@ -256,6 +258,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 # write the uhusavi file
                 vprint("Writing " + uhusavi_output_file)
                 uhusavi_xr.to_netcdf(uhusavi_output_file,
+                                     engine = 'h5netcdf',
                                      unlimited_dims = unlimited_dims)
                 uhusavi_xr.close()
                 
@@ -271,6 +274,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 # write the vhusavi file
                 vprint("Writing " + vhusavi_output_file)
                 vhusavi_xr.to_netcdf(vhusavi_output_file,
+                                     engine = 'h5netcdf',
                                      unlimited_dims = unlimited_dims)
                 vhusavi_xr.close()
                 
