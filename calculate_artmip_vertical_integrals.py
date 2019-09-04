@@ -60,6 +60,8 @@ def calculate_artmip_vertical_integrals(triplet_line,
     
     """
     
+    default_chunk_size = 10
+    
     def vprint(msg):
         """ Print a message only if be_verbose is True"""
         if be_verbose:
@@ -106,8 +108,13 @@ def calculate_artmip_vertical_integrals(triplet_line,
     hus_xr = xr.open_dataset(hus_file,
                              decode_coords = False,
                              decode_times = False,
-                             chunks={'time': 10},
                             )
+    # check whether the current chunk size will cause the read to overflow
+    chunk_size = default_chunk_size
+    if len(hus_xr['time']) > chunk_size:
+        chunk_size = len(hus_xr['time'])
+    # trigger dask usage by chunking in time
+    hus_xr = hus_xr.chunk({'time': chunk_size})
     hus_xr = xr.decode_cf(hus_xr, decode_coords = True, decode_times = True)
     
     ua_xr = None
@@ -117,16 +124,18 @@ def calculate_artmip_vertical_integrals(triplet_line,
         ua_xr = xr.open_dataset(ua_file,
                                 decode_coords = False,
                                 decode_times = False,
-                                chunks={'time': 10},
                                )
+        # trigger dask usage by chunking in time
+        ua_xr = ua_xr.chunk({'time': chunk_size})
         ua_xr = xr.decode_cf(ua_xr, decode_coords = True, decode_times = True)
     if va_file != "":
         vprint("Opening " + va_file)
         va_xr = xr.open_dataset(va_file,
                                 decode_coords = False,
                                 decode_times = False,
-                                chunks={'time': 10},
                                )
+        # trigger dask usage by chunking in time
+        va_xr = va_xr.chunk({'time': chunk_size})
         va_xr = xr.decode_cf(va_xr, decode_coords = True, decode_times = True)
     
     if one_timestep_test:
