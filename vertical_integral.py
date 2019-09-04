@@ -342,7 +342,8 @@ dpressure_calculator['IPSL-CM6A-LR'] = dpressure_from_IPSL_CM6A_LR
 
 
 def integrate(xr_dataset,
-              model = None):
+              model = None,
+              variables = None):
     """ Calculates the vertical, mass-weighted integral of `xr_dataset`.
     
     
@@ -356,6 +357,9 @@ def integrate(xr_dataset,
                          the data came. If not provided, this will be
                          inferred from the source_id attribute of
                          the input dataset
+                         
+            variables  : a list of variables to integrate.  If None is given
+                         all variables are integrated.
             
         output:
         -------
@@ -378,16 +382,24 @@ def integrate(xr_dataset,
     # get the mass-weighting term
     dp = neg_one_over_g*dpressure_calculator[model](xr_dataset)
     
-    # weight the variable
-    weighted_xr_dataset = dp * xr_dataset
-    
     # set the summation dimension
     dim_name = "lev"
     if model == "IPSL-CM6A-LR":
         dim_name = "presnivs"
         
-    # calculate the integral
-    int_xr_dataset = weighted_xr_dataset.sum(dim = dim_name)
+    
+    if variables is None:
+        # weight the variable
+        weighted_xr_dataset = dp * xr_dataset
+
+        # calculate the integral
+        int_xr_dataset = weighted_xr_dataset.sum(dim = dim_name)
+    else:
+        int_xr_dataset = xr_dataset.drop(variables)
+        
+        for var in variables:
+            weighted_var = dp * xr_dataset[var]
+            int_xr_dataset[var] = weighted_var.sum(dim = dim_name)
     
     # return the integrated xr_dataset
     return int_xr_dataset
