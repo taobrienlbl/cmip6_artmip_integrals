@@ -187,7 +187,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
         _git_sha = _repo.head.object.hexsha
         _git_short_sha = _repo.git.rev_parse(_git_sha, short=7)
         _git_branch = _repo.active_branch
-        artmip_xr.attrs['artmip_script_repo'] = "https://taobrienlbl@bitbucket.org/taobrienlbl/cmip6_artmip_integrals.git"
+        artmip_xr.attrs['artmip_script_repo'] = "https://bitbucket.org/lbl-cascade/cmip6_artmip_integrals.git"
         artmip_xr.attrs['artmip_script_branch'] = "{}".format(_git_branch)
         artmip_xr.attrs['artmip_script_rev'] = "{}".format(_git_short_sha)
     except:
