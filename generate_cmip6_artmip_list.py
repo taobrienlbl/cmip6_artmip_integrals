@@ -3,9 +3,15 @@
 import progressbar
 import database
 import datetime as dt
+import sys
+
+# set the input file list
+input_file_list = "/global/u1/t/taobrien/m1517_taobrien/cmip6_hackathon/cmip6_list_20190904.txt",
+if len(sys.argv) >= 2:
+    input_file_list = sys.argv[1]
 
 # get the list of CMIP6 runs with hus at 6 hourly output on native model levels
-cmip6_database = database.load()
+cmip6_database = database.load(input_file_list = input_file_list)
 cmip6_historical_plevs = database.select_by_dict(cmip6_database,
                                                  variable = "hus",
                                                  simulation = "historical",

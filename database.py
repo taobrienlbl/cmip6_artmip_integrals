@@ -3,8 +3,8 @@ import os
 
 
 def load(
-         input_file_list = "/global/cscratch1/sd/taobrien/cmip6_list_20190731.txt",
-         cache_file = 'cmip6_list_20190731.pk',
+         input_file_list = "/global/u1/t/taobrien/m1517_taobrien/cmip6_hackathon/cmip6_list_20190904.txt",
+         cache_file = 'cmip6_list_20190904.pk',
         ):
     """ Loads the database of available CMIP6 data.
     
