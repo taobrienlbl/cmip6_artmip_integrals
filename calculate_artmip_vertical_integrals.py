@@ -111,7 +111,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
                             )
     # check whether the current chunk size will cause the read to overflow
     chunk_size = default_chunk_size
-    if len(hus_xr['time']) > chunk_size:
+    if chunk_size > len(hus_xr['time']):
         chunk_size = len(hus_xr['time'])
     # trigger dask usage by chunking in time
     hus_xr = hus_xr.chunk({'time': chunk_size})
