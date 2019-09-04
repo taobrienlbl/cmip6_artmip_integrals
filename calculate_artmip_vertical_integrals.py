@@ -12,6 +12,8 @@ def calculate_artmip_vertical_integrals(triplet_line,
                                         original_base = "/global/cscratch1/sd/cmip6/CMIP6/CMIP/",
                                         output_base = os.environ['SCRATCH'] + '/ARTMIP_CMIP6/',
                                         do_clobber = False,
+                                        be_verbose = True,
+                                        no_return_xarray = True,
                                        ):
     """ Calculates prw, windhusavi, uhusavi, and vhusavi on CMIP6 output.
     
@@ -33,14 +35,19 @@ def calculate_artmip_vertical_integrals(triplet_line,
             output_base      : the base path to which to output the new fields.  Defaults to $SCRATCH/ARTMIP_CMIP6/
             
             do_clobber       : flags whether to overwrite existing files; skips working if all the expected output files already exist
+            
+            be_verbose       : flags whether to print updates along the way
+            
+            no_return_xarray : flags whether to return artmip_xr
                                
             
         output:
         -------
         
-            artmip_xr, output_file_list  : an xarray.DataSet containing the calculated fields, and a list of files written to disk
-                                           (this will be empty if write_output_files is False).  If do_clobber is False, and no
-                                           files are actually written, the paths will still be returned, but artmip_xr will be None.
+            output_file_list, [artmip_xr]  : a list of files written to disk, and (optionally) an xarray.DataSet containing the calculated fields
+                                             (this will be empty if write_output_files is False).  If do_clobber is False, and no
+                                             files are actually written, the paths will still be returned, but artmip_xr will be None if 
+                                             no_return_xarray is False.
             
             If write_output_files is True, then separate files for each calculated variable are written to disk.
             
@@ -52,6 +59,12 @@ def calculate_artmip_vertical_integrals(triplet_line,
             
     
     """
+    
+    def vprint(msg):
+        """ Print a message only if be_verbose is True"""
+        if be_verbose:
+            print(msg)
+    
     # extract the file paths from the triplet line
     hus_file, ua_file, va_file = triplet_line.rstrip().split(',')
     
@@ -83,8 +96,12 @@ def calculate_artmip_vertical_integrals(triplet_line,
             
         # if we aren't overwriting files and the expected files already exist, simply return
         if all([ os.path.exists(ofile) for ofile in output_file_list]) and not do_clobber:
-            return None, output_file_list
+            if no_return_xarray:
+                return output_file_list
+            else:
+                return output_file_list, None
             
+    vprint("Opening " + hus_file)
     # open the hus, ua, and va files (if ua and va are available)
     hus_xr = xr.open_dataset(hus_file,
                              decode_coords = False,
@@ -95,12 +112,14 @@ def calculate_artmip_vertical_integrals(triplet_line,
     ua_xr = None
     va_xr = None
     if ua_file != "":
+        vprint("Opening " + ua_file)
         ua_xr = xr.open_dataset(ua_file,
                                 decode_coords = False,
                                 decode_times = False,
                                )
         ua_xr = xr.decode_cf(ua_xr, decode_coords = True, decode_times = True)
     if va_file != "":
+        vprint("Opening " + va_file)
         va_xr = xr.open_dataset(va_file,
                                 decode_coords = False,
                                 decode_times = False,
@@ -115,6 +134,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
             va_xr = va_xr.isel(time = 0).load()
     
     # calculate iwv
+    vprint("Calculating IWV on {}".format(os.path.basename(hus_file)))
     artmip_xr = vertical_integral.integrate(hus_xr, variables = ['hus'])
     
     # set metadata for the vertical integral of hus
@@ -124,6 +144,7 @@ def calculate_artmip_vertical_integrals(triplet_line,
 
     # attempt to calculate ivt
     if ua_xr is not None and va_xr is not None:
+        vprint("Calculating IVT on {}".format(os.path.basename(hus_file)))
         artmip_xr['uhusavi'] = ua_xr['ua'] * hus_xr['hus']
         artmip_xr['vhusavi'] = va_xr['va'] * hus_xr['hus']
         
@@ -162,6 +183,18 @@ def calculate_artmip_vertical_integrals(triplet_line,
     
     if write_output_files:
         
+        # turn off fill values
+        fill_value = 1e20
+        unlimited_dims = ["time"]
+        
+        def fix_fill_values(ds, variable):
+            """ Fix fill values in xarray output"""
+            for var in ds.variables:
+                if var == variable:
+                    ds[var].encoding['_FillValue'] = fill_value
+                else:
+                    ds[var].encoding['_FillValue'] = None 
+        
         def ensure_output_dir_exists(output_file):
             output_dir = os.path.dirname(output_file)
             os.makedirs(output_dir, exist_ok = True)
@@ -175,8 +208,12 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 prw_xr = artmip_xr
             # make sure the output directory exists
             ensure_output_dir_exists(prw_output_file)
+            # deal with fill values
+            fix_fill_values(prw_xr, "prw")
             # write the prw file
-            prw_xr.to_netcdf(prw_output_file)
+            vprint("Writing " + prw_output_file)
+            prw_xr.to_netcdf(prw_output_file,
+                             unlimited_dims = unlimited_dims)
             prw_xr.close()
             
             
@@ -188,7 +225,11 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 # make sure the output directory exists
                 ensure_output_dir_exists(windhusavi_output_file)
                 # write the windhusavi file
-                windhusavi_xr.to_netcdf(windhusavi_output_file)
+                # deal with fill values
+                fix_fill_values(windhusavi_xr, "windhusavi")
+                vprint("Writing " + windhusavi_output_file)
+                windhusavi_xr.to_netcdf(windhusavi_output_file,
+                                        unlimited_dims = unlimited_dims)
                 windhusavi_xr.close()
                 
         # write the uhusavi file
@@ -198,8 +239,12 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 uhusavi_xr = artmip_xr.drop(['prw', 'windhusavi', 'vhusavi'])
                 # make sure the output directory exists
                 ensure_output_dir_exists(uhusavi_output_file)
+                # deal with fill values
+                fix_fill_values(uhusavi_xr, "uhusavi")
                 # write the uhusavi file
-                uhusavi_xr.to_netcdf(uhusavi_output_file)
+                vprint("Writing " + uhusavi_output_file)
+                uhusavi_xr.to_netcdf(uhusavi_output_file,
+                                     unlimited_dims = unlimited_dims)
                 uhusavi_xr.close()
                 
         # write the vhusavi file
@@ -209,8 +254,12 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 vhusavi_xr = artmip_xr.drop(['prw', 'windhusavi', 'uhusavi'])
                 # make sure the output directory exists
                 ensure_output_dir_exists(vhusavi_output_file)
+                # deal with fill values
+                fix_fill_values(vhusavi_xr, "vhusavi")
                 # write the vhusavi file
-                vhusavi_xr.to_netcdf(vhusavi_output_file)
+                vprint("Writing " + vhusavi_output_file)
+                vhusavi_xr.to_netcdf(vhusavi_output_file,
+                                     unlimited_dims = unlimited_dims)
                 vhusavi_xr.close()
                 
         # close input files to avoid netCDF file handle limit issues
@@ -220,6 +269,10 @@ def calculate_artmip_vertical_integrals(triplet_line,
         if va_xr is not None:
             va_xr.close()
    
+    vprint("Done with {}".format(os.path.basename(hus_file)))
     
-    return artmip_xr, output_file_list
+    if no_return_xarray:
+        return output_file_list
+    else:
+        return output_file_list, artmip_xr
     
