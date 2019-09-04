@@ -24,7 +24,7 @@ Example:
 ```bash
 bash generate_cmip6_file_list.bash
 python generate_cmip6_artmip_list.py cmip6_list_$(date +%Y%m%d).txt
-bash submit_artmip_calculation_script.bash
+bash run_artmip_calculation_script.sbatch
 ```
     
  
