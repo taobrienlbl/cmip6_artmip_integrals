@@ -2,7 +2,7 @@ This repository contains scripts for calculating integrated vapor transport (IVT
 
 # Getting Started
 
-There are four main steps in this process:
+There are three main steps in this process:
 
  1. Generate a list of all available CMIP6 files within a CMIP6 mirror directory:
     This will generate a file with a name like `cmip6_list_20190904.txt`
