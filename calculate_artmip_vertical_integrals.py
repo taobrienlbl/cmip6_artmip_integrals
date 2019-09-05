@@ -5,6 +5,8 @@ import vertical_integral
 import numpy as np
 import os
 import datetime as dt
+import tempfile
+import shutil
 
 def calculate_artmip_vertical_integrals(triplet_line,
                                         one_timestep_test = False,
@@ -208,8 +210,26 @@ def calculate_artmip_vertical_integrals(triplet_line,
                     ds[var].encoding['_FillValue'] = None 
         
         def ensure_output_dir_exists(output_file):
+            """ Make sure that the given output directory exists"""
             output_dir = os.path.dirname(output_file)
             os.makedirs(output_dir, exist_ok = True)
+            
+        def safe_write_netcdf(ds, output_file):
+            """ Write an xarray dataset to netCDF; final file won't be in place until writing is complete."""
+            vprint("Writing " + output_file)
+            # create a temporary file to which to write
+            temp_file = tempfile.NamedTemporaryFile(dir = os.environ['SCRATCH'] + '/tmp/',
+                                                    suffix = '.nc',
+                                                    delete = False)
+            # write the file to disk
+            ds.to_netcdf(temp_file.name,
+                         engine = 'h5netcdf',
+                         unlimited_dims = unlimited_dims)
+            # close the file
+            ds.close()
+            
+            # move the temporary file
+            shutil.move(temp_file.name, output_file)
         
         # write the prw file
         if not os.path.exists(prw_output_file) or do_clobber:
@@ -217,18 +237,14 @@ def calculate_artmip_vertical_integrals(triplet_line,
             if 'windhusavi' in artmip_xr:
                 prw_xr = artmip_xr.drop(['windhusavi', 'uhusavi', 'vhusavi'])
             else:
-                prw_xr = artmip_xr
+                prw_xr = artmip_xr.copy()
             # make sure the output directory exists
             ensure_output_dir_exists(prw_output_file)
             # deal with fill values
             fix_fill_values(prw_xr, "prw")
             # write the prw file
-            vprint("Writing " + prw_output_file)
-            prw_xr.to_netcdf(prw_output_file,
-                             engine = 'h5netcdf',
-                             unlimited_dims = unlimited_dims)
-            prw_xr.close()
-            
+            safe_write_netcdf(prw_xr, prw_output_file)
+           
             
         # write the windhusavi file
         if 'windhusavi' in artmip_xr.variables:
@@ -240,11 +256,9 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 # write the windhusavi file
                 # deal with fill values
                 fix_fill_values(windhusavi_xr, "windhusavi")
-                vprint("Writing " + windhusavi_output_file)
-                windhusavi_xr.to_netcdf(windhusavi_output_file,
-                                        engine = 'h5netcdf',
-                                        unlimited_dims = unlimited_dims)
-                windhusavi_xr.close()
+                # write the windhusavi file
+                safe_write_netcdf(windhusavi_xr, windhusavi_output_file)
+                
                 
         # write the uhusavi file
         if 'uhusavi' in artmip_xr.variables:
@@ -256,11 +270,8 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 # deal with fill values
                 fix_fill_values(uhusavi_xr, "uhusavi")
                 # write the uhusavi file
-                vprint("Writing " + uhusavi_output_file)
-                uhusavi_xr.to_netcdf(uhusavi_output_file,
-                                     engine = 'h5netcdf',
-                                     unlimited_dims = unlimited_dims)
-                uhusavi_xr.close()
+                safe_write_netcdf(uhusavi_xr, uhusavi_output_file)
+                
                 
         # write the vhusavi file
         if 'vhusavi' in artmip_xr.variables:
@@ -272,11 +283,8 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 # deal with fill values
                 fix_fill_values(vhusavi_xr, "vhusavi")
                 # write the vhusavi file
-                vprint("Writing " + vhusavi_output_file)
-                vhusavi_xr.to_netcdf(vhusavi_output_file,
-                                     engine = 'h5netcdf',
-                                     unlimited_dims = unlimited_dims)
-                vhusavi_xr.close()
+                safe_write_netcdf(vhusavi_xr, vhusavi_output_file)
+                
                 
         # close input files to avoid netCDF file handle limit issues
         hus_xr.close()
