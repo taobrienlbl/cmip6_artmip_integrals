@@ -4,6 +4,7 @@ import progressbar
 import database
 import datetime as dt
 import sys
+import schwimmbad
 
 # set the input file list
 input_file_list = "/global/u1/t/taobrien/m1517_taobrien/cmip6_hackathon/cmip6_list_20190904.txt",
@@ -12,18 +13,11 @@ if len(sys.argv) >= 2:
 
 # get the list of CMIP6 runs with hus at 6 hourly output on native model levels
 cmip6_database = database.load(input_file_list = input_file_list)
-cmip6_historical_plevs = database.select_by_dict(cmip6_database,
+cmip6_native_levs = database.select_by_dict(cmip6_database,
                                                  variable = "hus",
-                                                 simulation = "historical",
                                                  group = "6hrLev")
 
-bar = progressbar.ProgressBar(maxval=len(cmip6_historical_plevs), \
-        widgets=[progressbar.Bar('=', '[', ']'), ' ', progressbar.Percentage()])
-bar.start()
-
-triplet_file_lines = []
-i = 0
-for run in cmip6_historical_plevs.groupby(by = ["model", "simulation", "ensemble", "group", "file_id"]):
+def find_matching_files(run):
     model, simulation, ensemble, group, file_id = run[0]
     
     # set the current hus file
@@ -61,12 +55,20 @@ for run in cmip6_historical_plevs.groupby(by = ["model", "simulation", "ensemble
         
     triplet_line = ",".join([qa_file, ua_file, va_file])
     
-    triplet_file_lines.append(triplet_line)
-    
-    i += 1
-    bar.update(i)
+    return triplet_line
 
-bar.finish()
+
+pool = schwimmbad.MPIPool()
+if pool.is_master():
+    print("Pool starting: searching through {} files".format(len(cmip6_native_levs)))
+else:
+    pool.wait()
+    sys.exit(0)
+
+# use mpi parallelism to search for matching files in the CMIP6 database
+triplet_file_lines = pool.map(find_matching_files, cmip6_native_levs.groupby(by = ["model", "simulation", "ensemble", "group", "file_id"]))
+pool.close()
+print("Pool finished")
         
 # write a csv file, where each row is a set of files to process for IVT and IWV
 triplet_file_string = "\n".join(triplet_file_lines)
