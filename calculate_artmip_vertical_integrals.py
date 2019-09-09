@@ -11,7 +11,7 @@ import shutil
 def calculate_artmip_vertical_integrals(triplet_line,
                                         one_timestep_test = False,
                                         write_output_files = True,
-                                        original_base = "/global/cscratch1/sd/cmip6/CMIP6/CMIP/",
+                                        original_base = "/global/cscratch1/sd/cmip6/CMIP6/",
                                         output_base = os.environ['SCRATCH'] + '/ARTMIP_CMIP6/',
                                         do_clobber = False,
                                         be_verbose = True,
