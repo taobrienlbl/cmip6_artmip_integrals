@@ -1,10 +1,11 @@
 import pandas as pd
 import os
+import datetime as dt
 
 
 def load(
-         input_file_list = "/global/u1/t/taobrien/m1517_taobrien/cmip6_hackathon/cmip6_list_20190904.txt",
-         cache_file = 'cmip6_list_20190904.pk',
+         input_file_list = "/project/projectdirs/m1517/cascade/taobrien/artmip/tier2/cmip6_data_and_inventory/cmip6_list_20190905.txt",
+         cache_file = 'cmip6_list_20190905.pk',
         ):
     """ Loads the database of available CMIP6 data.
     
@@ -48,6 +49,40 @@ def load(
         
         # remove parts of the path that precede the CMIP6 dataset
         full_table = full_table.drop(columns = [ 'd{}'.format(i) for i in range(1,7)])
+        
+        def reconstruct_date(x, start = True):
+            try:
+                if start:
+                    datestr = x.split('_')[-1].split('-')[0]
+                else:
+                    datestr = x.split('_')[-1].split('-')[1].split('.')[0]
+            except:
+                return pd.NaT
+
+            if len(datestr) == 4:
+                strptime_string = "%Y"
+            elif len(datestr) == 6:
+                strptime_string = "%Y%m"
+            elif len(datestr) == 8:
+                strptime_string = "%Y%m%d"
+            elif len(datestr) == 10:
+                strptime_string = "%Y%m%d%H"
+            elif len(datestr) == 12:
+                strptime_string = "%Y%m%d%H%M"
+            else:
+                #raise ValueError("Could not parse date: ", datestr)
+                date = pd.NaT
+
+            try:
+                date = dt.datetime.strptime(datestr, strptime_string)
+            except:
+                # if the date can't be parsed, return NaT
+                date = pd.NaT
+
+            return date
+
+        full_table['startdate'] = full_table['filename'].apply( reconstruct_date )
+        full_table['enddate'] = full_table['filename'].apply( lambda x: reconstruct_date(x, start = False) )
 
         # Attempt to save the cache file
         if cache_file is not None:
