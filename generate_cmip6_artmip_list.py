@@ -1,21 +1,33 @@
 #!/usr/bin/env python
 # coding: utf-8
 import progressbar
+import pandas as pd
 import database
 import datetime as dt
 import sys
 import schwimmbad
 
 # set the input file list
-input_file_list = "/global/u1/t/taobrien/m1517_taobrien/cmip6_hackathon/cmip6_list_20190904.txt",
+input_file_list = "/global/u1/t/taobrien/m1517_taobrien/cmip6_hackathon/cmip6_list_20190909.txt",
 if len(sys.argv) >= 2:
     input_file_list = sys.argv[1]
 
 # get the list of CMIP6 runs with hus at 6 hourly output on native model levels
 cmip6_database = database.load(input_file_list = input_file_list)
-cmip6_native_levs = database.select_by_dict(cmip6_database,
-                                                 variable = "hus",
-                                                 group = "6hrLev")
+
+# get only the historical and ssp585 simulations
+df_historical = database.select_by_dict(cmip6_database, 
+                                        simulation = 'historical',
+                                        variable = "hus",
+                                        group = '6hrLev')
+
+
+df_ssp585 = database.select_by_dict(cmip6_database,
+                            simulation = 'ssp585',
+                            variable = "hus",
+                            group = '6hrLev')
+
+cmip6_native_levs = pd.concat([df_historical, df_ssp585])
 
 def find_matching_files(run):
     model, simulation, ensemble, group, file_id = run[0]
