@@ -341,6 +341,53 @@ dpressure_calculator['SAM0-UNICON'] = dpressure_from_SAM0_UNICON
 dpressure_calculator['IPSL-CM6A-LR'] = dpressure_from_IPSL_CM6A_LR
 
 
+def get_level_variable_name(xr_dataset, model = None):
+    """Gets the dimension name for an IPCC model file
+    
+        input:
+        ------
+        
+            xr_dataset : (xarray.DataSet) an input dataset with associated
+                         coordinate variables
+                         
+            model      : (str) the name of the model from which 
+                         the data came. If not provided, this will be
+                         inferred from the source_id attribute of
+                         the input dataset
+ 
+                         
+        output:
+        -------
+        
+            dim_name, model   : the name of the level dimension, and the model name
+            
+            
+        Raises RuntimeError if the model name isn't in the variable metadata and NotImplementedError if 
+        the model isn't in the list of models for which this module can work.
+ 
+    
+    """
+    if 'source_id' in xr_dataset.attrs:
+        model = xr_dataset.attrs['source_id']
+    else:
+        model = None
+        
+    if model is None:
+        raise RuntimeError("Could not infer model name from the attributes of xr_dataset.  Please explicitly set 'model'.")
+    
+    # check if we have the information to integrate verticall for this model
+    if model not in dpressure_calculator:
+        raise NotImplementedError("Vertical integration for model `{}` has not been implemented.".format(model))
+        
+    # set the summation dimension
+    dim_name = "lev"
+    if model == "IPSL-CM6A-LR":
+        dim_name = "presnivs"
+        
+    return dim_name, model
+ 
+ 
+
 def integrate(xr_dataset,
               model = None,
               variables = None):
@@ -369,24 +416,19 @@ def integrate(xr_dataset,
     
     """
     
-    if 'source_id' in xr_dataset.attrs:
-        model = xr_dataset.attrs['source_id']
-    else:
-        if model is None:
-            raise RuntimeError("Could not infer model name from the attributes of xr_dataset.  Please explicitly set 'model'.")
     
-    # check if we have the information to integrate verticall for this model
-    if model not in dpressure_calculator:
-        raise NotImplementedError("Vertical integration for model `{}` has not been implemented.".format(model))
-    
+    dim_name, model = get_level_variable_name(xr_dataset, model)
+   
     # get the mass-weighting term
     dp = neg_one_over_g*dpressure_calculator[model](xr_dataset)
     
-    # set the summation dimension
-    dim_name = "lev"
-    if model == "IPSL-CM6A-LR":
-        dim_name = "presnivs"
-        
+   # ensure that dp has the correct ordering
+    dp = dp.transpose('time', dim_name, 'lat', 'lon')
+    
+    # ensure that dp and the output variable have the same vertical coordinate 
+    # this is a kludge to deal with the fact that level information changes for the CESM model
+    # for some years
+    dp = dp.assign_coords(**{dim_name : xr_dataset[dim_name]})
     
     if variables is None:
         # weight the variable
@@ -404,3 +446,26 @@ def integrate(xr_dataset,
     # return the integrated xr_dataset
     return int_xr_dataset
 
+
+def safe_multiply(ds1, ds2, var1, var2):
+    """Multiplies two 3D IPCC variables from the same dataset, dealing with the possibility that level data are corrupted.
+    
+        input:
+        ------
+            ds1, ds2      : xarray.Dataset objects containing the variables to multiply
+            
+            var1, var2    : the variable names in ds1 and ds2 respectively
+            
+            
+        output:
+        
+            result : an xarray.DataArray object with the result
+    """
+    
+    # get the level dimension name
+    dim_name, model = get_level_variable_name(ds1)
+    
+    return ds1[var1].assign_coords(**{dim_name : ds2[dim_name]}) * ds2[var2]
+    
+    
+    

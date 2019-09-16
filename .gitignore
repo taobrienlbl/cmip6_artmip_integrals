@@ -11,3 +11,5 @@ cmip6*.txt
 *.log
 core*
 *.pyc
+test*.py
+test*.sbatch

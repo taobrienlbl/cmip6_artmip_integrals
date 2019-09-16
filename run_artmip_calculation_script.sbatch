@@ -2,11 +2,13 @@
 #SBATCH -N 20
 #SBATCH -C haswell
 #SBATCH -q regular
-#SBATCH -J artmip_calc
-#SBATCH -t 00:59:00
+#SBATCH -J artmip_cmip6
+#SBATCH -t 01:15:00
 
 #OpenMP settings:
 export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
 export OMP_PLACES=threads
 export OMP_PROC_BIND=spread
 

@@ -7,6 +7,7 @@ import os
 import datetime as dt
 import tempfile
 import shutil
+from dask.diagnostics import ProgressBar
 
 def calculate_artmip_vertical_integrals(triplet_line,
                                         one_timestep_test = False,
@@ -16,6 +17,8 @@ def calculate_artmip_vertical_integrals(triplet_line,
                                         do_clobber = False,
                                         be_verbose = True,
                                         no_return_xarray = True,
+                                        default_chunk_size = 32,
+                                        do_write_progress_bar = False,
                                        ):
     """ Calculates prw, windhusavi, uhusavi, and vhusavi on CMIP6 output.
     
@@ -41,6 +44,10 @@ def calculate_artmip_vertical_integrals(triplet_line,
             be_verbose       : flags whether to print updates along the way
             
             no_return_xarray : flags whether to return artmip_xr
+
+            default_chunk_size : the default chunk size to pass to xarray for dask
+
+            do_write_progress_bar : flags whether to write a dask progress bar during writing
                                
             
         output:
@@ -62,7 +69,6 @@ def calculate_artmip_vertical_integrals(triplet_line,
     
     """
     
-    default_chunk_size = 10
     
     def vprint(msg):
         """ Print a message only if be_verbose is True"""
@@ -159,8 +165,8 @@ def calculate_artmip_vertical_integrals(triplet_line,
     # attempt to calculate ivt
     if ua_xr is not None and va_xr is not None:
         vprint("Calculating IVT on {}".format(os.path.basename(hus_file)))
-        artmip_xr['uhusavi'] = ua_xr['ua'] * hus_xr['hus']
-        artmip_xr['vhusavi'] = va_xr['va'] * hus_xr['hus']
+        artmip_xr['uhusavi'] = vertical_integral.safe_multiply(ua_xr, hus_xr, 'ua', 'hus')
+        artmip_xr['vhusavi'] = vertical_integral.safe_multiply(va_xr, hus_xr, 'va', 'hus')
         
         # integrate the components of IVT
         artmip_xr = vertical_integral.integrate(artmip_xr, variables = ['uhusavi', 'vhusavi'])
@@ -222,9 +228,17 @@ def calculate_artmip_vertical_integrals(triplet_line,
                                                     suffix = '.nc',
                                                     delete = False)
             # write the file to disk
-            ds.to_netcdf(temp_file.name,
-                         engine = 'h5netcdf',
-                         unlimited_dims = unlimited_dims)
+            delayed_obj = ds.to_netcdf(temp_file.name,
+                                       compute = False,
+                                       unlimited_dims = unlimited_dims)
+
+            # do the writing (using a progress bar or not)
+            if do_write_progress_bar:
+                with ProgressBar():
+                    results = delayed_obj.compute()
+            else:
+                results = delayed_obj.compute()
+
             # close the file
             ds.close()
             
