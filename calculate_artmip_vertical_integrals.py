@@ -152,6 +152,27 @@ def calculate_artmip_vertical_integrals(triplet_line,
             ua_xr = ua_xr.isel(time = 0).load()
         if va_xr is not None:
             va_xr = va_xr.isel(time = 0).load()
+
+    # deal with possibly corrupt coordinates in the BCC dataset
+    _, model = vertical_integral.get_level_variable_name(hus_xr)
+    if model == 'BCC-CSM2-MR':
+        # check if we are dealing with corrupted BCC files
+        if float(hus_xr['lev'].isel(lev = 0).values) == 0.0 or \
+           float(ua_xr['lev'].isel(lev = 0).values) == 0.0 or \
+           float(va_xr['lev'].isel(lev = 0).values) == 0.0:
+            # attempt to open a file containing the BCC coordinates
+            bcc_coord_file = f"{os.path.dirname(os.path.abspath(__file__))}/bcc_ref_coords.nc"
+            if os.path.exists(bcc_coord_file):
+                bcc_coords_xr = xr.open_dataset(bcc_coord_file)
+                lev = bcc_coords_xr['lev']
+                lat = bcc_coords_xr['lat']
+                lon = bcc_coords_xr['lon']
+                # overwrite coordinates in the datasets being multiplied
+                hus_xr = hus_xr.assign_coords(lat = lat, lon = lon, lev = lev)
+                ua_xr = ua_xr.assign_coords(lat = lat, lon = lon, lev = lev)
+                va_xr = va_xr.assign_coords(lat = lat, lon = lon, lev = lev)
+
+
     
     # calculate iwv
     vprint("Calculating IWV on {}".format(os.path.basename(hus_file)))
