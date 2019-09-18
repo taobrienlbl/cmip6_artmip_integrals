@@ -13,3 +13,5 @@ core*
 *.pyc
 test*.py
 test*.sbatch
+file_lists*
+bcc_ref_coords.nc
