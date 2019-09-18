@@ -12,7 +12,7 @@ smpi = simpleMPI.simpleMPI()
 
 if smpi.rank == 0:
     # get the file containing the list of files to run on
-    cmip6_list_file = "cmip6_artmip_files_to_process_20190909.csv"
+    cmip6_list_file = "cmip6_artmip_files_to_process_20190917.csv"
     if len(sys.argv) >= 2:
         cmip6_list_file = sys.argv[1]
 

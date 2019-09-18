@@ -36,6 +36,7 @@ def load(
     if not os.path.exists(cache_file):
         names = ["dum", "d1", "d2", "d3", "d4", "d5", "d6", "center", "model", "simulation", "ensemble", "group", "variable", "gn", "version", "filename"]
 
+        print(f"Reading from {input_file_list}")
         # read the list of files
         full_table = pd.read_csv(input_file_list, sep = '/', names = names)
         # remove the dummy column (the preceeding /)
@@ -91,6 +92,7 @@ def load(
             except:
                 pass
     else:
+        print(f"Reading from {cache_file}")
         full_table = pd.read_pickle(cache_file)
 
 

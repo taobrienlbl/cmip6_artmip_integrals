@@ -13,7 +13,7 @@ if len(sys.argv) >= 2:
     input_file_list = sys.argv[1]
 
 # get the list of CMIP6 runs with hus at 6 hourly output on native model levels
-cmip6_database = database.load(input_file_list = input_file_list)
+cmip6_database = database.load(input_file_list = input_file_list, cache_file = input_file_list.replace('.txt','.pk'))
 
 # get only the historical and ssp585 simulations
 df_historical = database.select_by_dict(cmip6_database, 
