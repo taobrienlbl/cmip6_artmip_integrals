@@ -171,6 +171,13 @@ def calculate_artmip_vertical_integrals(triplet_line,
                 hus_xr = hus_xr.assign_coords(lat = lat, lon = lon, lev = lev)
                 ua_xr = ua_xr.assign_coords(lat = lat, lon = lon, lev = lev)
                 va_xr = va_xr.assign_coords(lat = lat, lon = lon, lev = lev)
+                # overwrite the a/b coordinates
+                hus_xr['a_bnds'] = bcc_coords_xr['a_bnds']
+                ua_xr['a_bnds'] = bcc_coords_xr['a_bnds']
+                va_xr['a_bnds'] = bcc_coords_xr['a_bnds']
+                hus_xr['b_bnds'] = bcc_coords_xr['b_bnds']
+                ua_xr['b_bnds'] = bcc_coords_xr['b_bnds']
+                va_xr['b_bnds'] = bcc_coords_xr['b_bnds']
 
 
     
